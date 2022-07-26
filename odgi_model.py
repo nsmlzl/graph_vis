@@ -91,10 +91,54 @@ def main(args):
             r_x = r * dx
             r_y = r * dy
 
-            x[i-1, vis_p_i, 0] = x[i-1, vis_p_i, 0] - r_x
-            x[j-1, vis_p_j, 0] = x[j-1, vis_p_j, 0] + r_x
-            x[i-1, vis_p_i, 1] = x[i-1, vis_p_i, 1] - r_y
-            x[j-1, vis_p_j, 1] = x[j-1, vis_p_j, 1] + r_y
+
+            # Optimize visualization quality for large batches
+            # Problem: In large batches the coordinates of some nodes will be updated multiple times
+
+            # Combine node ids with respective visualization points
+            # (we need to differentiate between both visualization nodes of each sequence element)
+            i_with_vis = torch.cat((i,vis_p_i),0)
+            j_with_vis = torch.cat((j,vis_p_j),0)
+            # Move each node id and its respective visualization node in a line of (x_with_vis_trans)
+            i_with_vis_trans = torch.transpose(torch.reshape(i_with_vis, (2, args.batch_size)),0,1)
+            j_with_vis_trans = torch.transpose(torch.reshape(j_with_vis, (2, args.batch_size)),0,1)
+
+            # Combine i and j
+            n_with_vis = torch.cat((i_with_vis_trans, j_with_vis_trans), 0)
+            # Get each combination only once
+            unique_n = torch.unique(n_with_vis, dim=0)
+            counter_i = 0
+            counter_j = 0
+            for n in unique_n:
+                r_x_tmp = torch.empty((0,), dtype=torch.float64)
+                r_y_tmp = torch.empty((0,), dtype=torch.float64)
+
+                # get all the r_x & r_y elements for node n (might be subtracted when i, or added when j)
+                i_idx = torch.logical_and((n==i_with_vis_trans)[:,0], (n==i_with_vis_trans)[:,1]).nonzero()
+                j_idx = torch.logical_and((n==j_with_vis_trans)[:,0], (n==j_with_vis_trans)[:,1]).nonzero()
+                # if added as i element -> negate
+                # if added as j element -> don't change sign
+                for e in i_idx:
+                    counter_i = counter_i + 1
+                    r_x_tmp = torch.cat((r_x_tmp, torch.tensor([-r_x[e]], dtype=torch.float64)),0)
+                    r_y_tmp = torch.cat((r_y_tmp, torch.tensor([-r_y[e]], dtype=torch.float64)),0)
+
+                for e in j_idx:
+                    counter_j = counter_j + 1
+                    r_x_tmp = torch.cat((r_x_tmp, torch.tensor([r_x[e]], dtype=torch.float64)),0)
+                    r_y_tmp = torch.cat((r_y_tmp, torch.tensor([r_y[e]], dtype=torch.float64)),0)
+
+                # add/subtract mean value to respective coordinates
+                x[n[0]-1, n[1], 0] = x[n[0]-1, n[1], 0] + torch.mean(r_x_tmp)
+                x[n[0]-1, n[1], 1] = x[n[0]-1, n[1], 1] + torch.mean(r_y_tmp)
+
+
+            # x[i-1, vis_p_i, 0] = x[i-1, vis_p_i, 0] - r_x
+            # x[j-1, vis_p_j, 0] = x[j-1, vis_p_j, 0] + r_x
+            # x[i-1, vis_p_i, 1] = x[i-1, vis_p_i, 1] - r_y
+            # x[j-1, vis_p_j, 1] = x[j-1, vis_p_j, 1] + r_y
+            assert counter_i == args.batch_size
+            assert counter_j == args.batch_size
 
         if ((iteration+1) % 5) == 0 and args.create_iteration_figs == True:
             x_np = x.clone().detach().numpy()
