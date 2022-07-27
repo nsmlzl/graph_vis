@@ -26,12 +26,13 @@ class OdgiTorchDataset(torch.utils.data.Dataset):
 
 
 class OdgiDataloader:
-    def __init__(self, file_name, batch_size=1, zipf_theta=0.99, space_max=1000, space_quantization_step=100, first_cooling_iteration=15):
+    def __init__(self, file_name, batch_size=1, zipf_theta=0.99, space_max=1000, space_quantization_step=100, first_cooling_iteration=15, load_threads=1):
         self.batch_size = batch_size
         self.zipf_theta = zipf_theta
         self.space_max = space_max
         self.space_quantization_step = space_quantization_step
         self.first_cooling_iter = first_cooling_iteration
+        self.load_threads = load_threads
 
         self.batch_counter = 0
         self.iteration = 1
@@ -71,7 +72,7 @@ class OdgiDataloader:
         cooling = False
         if self.iteration >= self.first_cooling_iter :
             cooling = True
-        (i_np, j_np, vis_i_np, vis_j_np, d_np) = odgi_get_random_node_numpy_batch(self.rnd_node_gen, self.batch_size, cooling)
+        (i_np, j_np, vis_i_np, vis_j_np, d_np) = odgi_get_random_node_numpy_batch(self.rnd_node_gen, self.batch_size, cooling, self.load_threads)
         w_np = np.empty(self.batch_size, dtype=np.float)
         w_np = 1.0 / (d_np**2)
         return i_np, j_np, vis_i_np, vis_j_np, w_np, d_np

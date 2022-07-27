@@ -1,5 +1,6 @@
 # Use with odgi branch zhang_research_extended https://github.com/nsmlzl/odgi/tree/zhang_research_extended
-# Run with command 'env LD_PRELOAD=libjemalloc.so.2 PYTHONPATH=<lib dir of odgi-build> python3 batch_sgd.py --batch_size 100 --num_iter 30'
+# Run with command 'env LD_PRELOAD=libjemalloc.so.2 PYTHONPATH=<lib dir of odgi-build> python3 odgi_model.py --batch_size 100 --num_iter 30'
+# For debugging 'env LD_PRELOAD=libjemalloc.so.2 PYTHONPATH=<lib dir of odgi-build> gdb --args python3 odgi_model.py --batch_size 100 --num_iter 30'
 
 import argparse
 import sys
@@ -36,7 +37,7 @@ def draw_svg(x, gdata, output_name):
 
 def main(args):
     start = datetime.now()
-    data = OdgiDataloader(args.file, batch_size=args.batch_size)
+    data = OdgiDataloader(args.file, batch_size=args.batch_size, load_threads=10)
 
     n = data.get_node_count()
     num_iter = args.num_iter
