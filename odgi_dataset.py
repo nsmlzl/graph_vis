@@ -72,14 +72,14 @@ class OdgiDataloader:
         cooling = False
         if self.iteration >= self.first_cooling_iter :
             cooling = True
-        (i_np, j_np, vis_i_np, vis_j_np, d_np) = odgi_get_random_node_numpy_batch(self.rnd_node_gen, self.batch_size, cooling, self.load_threads)
-        w_np = np.empty(self.batch_size, dtype=np.float)
-        w_np = 1.0 / (d_np**2)
-        return i_np, j_np, vis_i_np, vis_j_np, w_np, d_np
+        (vis_i_np, vis_j_np, d_np) = odgi_get_random_node_numpy_batch(self.rnd_node_gen, self.batch_size, cooling, self.load_threads)
+        # w_np = np.empty(self.batch_size, dtype=np.float)
+        # w_np = 1.0 / (d_np**2)
+        return vis_i_np, vis_j_np, d_np
 
     def get_random_node_torch_batch(self) :
-        (i_np, j_np, vis_i_np, vis_j_np, w_np, d_np) = self.get_random_node_numpy_batch()
-        return torch.from_numpy(i_np), torch.from_numpy(j_np), torch.from_numpy(vis_i_np), torch.from_numpy(vis_j_np), torch.from_numpy(w_np), torch.from_numpy(d_np)
+        (vis_i_np, vis_j_np, d_np) = self.get_random_node_numpy_batch()
+        return torch.from_numpy(vis_i_np), torch.from_numpy(vis_j_np), torch.from_numpy(d_np)
 
     def set_batch_size(self, batch_size):
         self.batch_size = batch_size

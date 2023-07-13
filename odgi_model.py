@@ -37,7 +37,7 @@ def draw_svg(x, gdata, output_name):
 
 def main(args):
     start = datetime.now()
-    data = OdgiDataloader(args.file, batch_size=args.batch_size, load_threads=10)
+    data = OdgiDataloader(args.file, batch_size=args.batch_size, load_threads=30)
 
     n = data.get_node_count()
     num_iter = args.num_iter
@@ -56,13 +56,13 @@ def main(args):
         schedule.append(eta)
 
 
-    x = torch.rand([n,2,2], dtype=torch.float64)
+    x = torch.rand([n*2,2], dtype=torch.float64)
 
     # ***** Interesting NOTE: I think odgi runs one iteration more than selected with argument
     for iteration, eta in enumerate(schedule[:num_iter]):
         print("Computing iteration", iteration + 1, "of", num_iter, eta)
         
-        for batch_idx, (i, j, vis_p_i, vis_p_j, _w, dis) in enumerate(data):
+        for batch_idx, (vis_p_i, vis_p_j, dis) in enumerate(data):
             # print("batch", batch_idx, "of", math.floor(float(data.steps_in_iteration()) / float(data.batch_size)))
             # pytorch model as close as possible to odgi implementation
 
@@ -74,10 +74,10 @@ def main(args):
             mu = eta * w
             mu_m = torch.min(mu, torch.ones_like(mu))
 
-            x_i = x[i-1,vis_p_i,0]
-            x_j = x[j-1,vis_p_j,0]
-            y_i = x[i-1,vis_p_i,1]
-            y_j = x[j-1,vis_p_j,1]
+            x_i = x[vis_p_i,0]
+            x_j = x[vis_p_j,0]
+            y_i = x[vis_p_i,1]
+            y_j = x[vis_p_j,1]
 
             dx = x_i - x_j
             dy = y_i - y_j
@@ -92,10 +92,10 @@ def main(args):
             r_x = r * dx
             r_y = r * dy
 
-            x[i-1, vis_p_i, 0] = x[i-1, vis_p_i, 0] - r_x
-            x[j-1, vis_p_j, 0] = x[j-1, vis_p_j, 0] + r_x
-            x[i-1, vis_p_i, 1] = x[i-1, vis_p_i, 1] - r_y
-            x[j-1, vis_p_j, 1] = x[j-1, vis_p_j, 1] + r_y
+            x[vis_p_i, 0] = x[vis_p_i, 0] - r_x
+            x[vis_p_j, 0] = x[vis_p_j, 0] + r_x
+            x[vis_p_i, 1] = x[vis_p_i, 1] - r_y
+            x[vis_p_j, 1] = x[vis_p_j, 1] + r_y
 
         if ((iteration+1) % 5) == 0 and args.create_iteration_figs == True:
             x_np = x.clone().detach().numpy()
@@ -104,9 +104,9 @@ def main(args):
     end = datetime.now()
     print("Computation took", end-start)
 
-    x_np = x.detach().numpy()
+    x_np = x.detach().numpy().reshape(n,2,2)
     OdgiInterface.generate_layout_file(data.get_graph(), x_np, "output/" + args.file + ".lay")
-    draw_svg(x_np, data, "output/out_final")
+    #draw_svg(x_np, data, "output/out_final")
 
 
 if __name__ == "__main__":
